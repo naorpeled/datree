@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/datreeio/datree/pkg/evaluation"
+
 	"github.com/datreeio/datree/bl/files"
 
+	"github.com/datreeio/datree/pkg/ciContext"
 	"github.com/datreeio/datree/pkg/deploymentConfig"
 
 	"github.com/datreeio/datree/pkg/executor"
@@ -20,7 +23,6 @@ import (
 	"github.com/datreeio/datree/pkg/utils"
 
 	"github.com/datreeio/datree/bl/errorReporter"
-	"github.com/datreeio/datree/bl/evaluation"
 	"github.com/datreeio/datree/bl/messager"
 	"github.com/datreeio/datree/bl/validation"
 	"github.com/datreeio/datree/cmd"
@@ -34,6 +36,7 @@ func main() {
 	validator := networkValidator.NewNetworkValidator()
 	cliClient := cliClient.NewCliClient(deploymentConfig.URL, validator)
 	localConfig := localConfig.NewLocalConfigClient(cliClient, validator)
+	ciContext := ciContext.Extract()
 
 	reporter := errorReporter.NewErrorReporter(cliClient, localConfig)
 	globalPrinter := printer.CreateNewPrinter()
@@ -41,7 +44,8 @@ func main() {
 	app := &cmd.App{
 		Context: &cmd.Context{
 			LocalConfig:         localConfig,
-			Evaluator:           evaluation.New(cliClient),
+			CiContext:           ciContext,
+			Evaluator:           evaluation.New(cliClient, ciContext),
 			CliClient:           cliClient,
 			Messager:            messager.New(cliClient),
 			Printer:             globalPrinter,

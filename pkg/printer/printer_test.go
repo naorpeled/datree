@@ -8,11 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPrintWarnings(t *testing.T) {
+func TestGetWarningsText(t *testing.T) {
 	printer := CreateNewPrinter()
-
 	warnings := []Warning{{
-		Title: "Failed with Occurrences",
+		Title: GetFileNameText("~/.datree/k8-demo.yaml"),
 		FailedRules: []FailedRule{
 			{
 				Name:               "Caption",
@@ -23,17 +22,17 @@ func TestPrintWarnings(t *testing.T) {
 		},
 	},
 		{
-			Title:           "Failed with yaml validation",
+			Title:           GetFileNameText("/datree/datree/internal/fixtures/kube/yaml-validation-error.yaml\n"),
 			FailedRules:     []FailedRule{},
 			InvalidYamlInfo: InvalidYamlInfo{ValidationErrors: []error{fmt.Errorf("yaml validation error")}},
 		},
 		{
-			Title:          "Failed with k8s validation",
+			Title:          GetFileNameText("/datree/datree/internal/fixtures/kube/k8s-validation-error.yaml\n"),
 			FailedRules:    []FailedRule{},
 			InvalidK8sInfo: InvalidK8sInfo{ValidationErrors: []error{fmt.Errorf("K8S validation error")}, K8sVersion: "1.18.0"},
 		},
 		{
-			Title:          ">>  File: /datree/datree/internal/fixtures/kube/Chart.yaml\n",
+			Title:          GetFileNameText("/datree/datree/internal/fixtures/kube/Chart.yaml\n"),
 			FailedRules:    []FailedRule{},
 			InvalidK8sInfo: InvalidK8sInfo{ValidationErrors: []error{fmt.Errorf("K8S validation error")}, K8sVersion: "1.18.0"},
 			ExtraMessages: []ExtraMessage{{Text: "Are you trying to test a raw helm file? To run Datree with Helm - check out the helm plugin README:\nhttps://github.com/datreeio/helm-datree",
@@ -41,26 +40,27 @@ func TestPrintWarnings(t *testing.T) {
 		},
 	}
 
-	t.Run("Test PrintWarnings", func(t *testing.T) {
+	t.Run("Test GetWarningsText", func(t *testing.T) {
 
 		out = new(bytes.Buffer)
 
-		printer.PrintWarnings(warnings)
-
-		got := out.(*bytes.Buffer).Bytes()
+		got := printer.GetWarningsText(warnings)
 
 		expected := []byte(
-			`Failed with Occurrences
+			`>>  File: ~/.datree/k8-demo.yaml
+
 [V] YAML validation
 [V] Kubernetes schema validation
 
 [X] Policy check
 
 ❌  Caption  [1 occurrence]
-    — metadata.name: yishay (kind: Pod)
+    - metadata.name: yishay (kind: Pod)
 💡  Suggestion
 
-Failed with yaml validation
+>>  File: /datree/datree/internal/fixtures/kube/yaml-validation-error.yaml
+
+
 [X] YAML validation
 
 ❌  yaml validation error
@@ -68,7 +68,9 @@ Failed with yaml validation
 [?] Kubernetes schema validation didn't run for this file
 [?] Policy check didn't run for this file
 
-Failed with k8s validation
+>>  File: /datree/datree/internal/fixtures/kube/k8s-validation-error.yaml
+
+
 [V] YAML validation
 [X] Kubernetes schema validation
 
@@ -77,6 +79,7 @@ Failed with k8s validation
 [?] Policy check didn't run for this file
 
 >>  File: /datree/datree/internal/fixtures/kube/Chart.yaml
+
 
 [V] YAML validation
 [X] Kubernetes schema validation
@@ -88,31 +91,32 @@ https://github.com/datreeio/helm-datree
 
 
 `)
-		assert.Equal(t, string(expected), string(got))
+		assert.Equal(t, string(expected), got)
 	})
 
-	t.Run("Test PrintWarnings simple output", func(t *testing.T) {
+	t.Run("Test GetWarningsText simple output", func(t *testing.T) {
 
 		out = new(bytes.Buffer)
 
 		printer.SetTheme(CreateSimpleTheme())
 
-		printer.PrintWarnings(warnings)
-
-		got := out.(*bytes.Buffer).Bytes()
+		got := printer.GetWarningsText(warnings)
 
 		expected := []byte(
-			`Failed with Occurrences
+			`>>  File: ~/.datree/k8-demo.yaml
+
 [V] YAML validation
 [V] Kubernetes schema validation
 
 [X] Policy check
 
 [X]  Caption  [1 occurrence]
-    — metadata.name: yishay (kind: Pod)
+    - metadata.name: yishay (kind: Pod)
 [*]  Suggestion
 
-Failed with yaml validation
+>>  File: /datree/datree/internal/fixtures/kube/yaml-validation-error.yaml
+
+
 [X] YAML validation
 
 [X]  yaml validation error
@@ -120,7 +124,9 @@ Failed with yaml validation
 [?] Kubernetes schema validation didn't run for this file
 [?] Policy check didn't run for this file
 
-Failed with k8s validation
+>>  File: /datree/datree/internal/fixtures/kube/k8s-validation-error.yaml
+
+
 [V] YAML validation
 [X] Kubernetes schema validation
 
@@ -129,6 +135,7 @@ Failed with k8s validation
 [?] Policy check didn't run for this file
 
 >>  File: /datree/datree/internal/fixtures/kube/Chart.yaml
+
 
 [V] YAML validation
 [X] Kubernetes schema validation
@@ -140,12 +147,12 @@ https://github.com/datreeio/helm-datree
 
 
 `)
-		assert.Equal(t, string(expected), string(got))
+		assert.Equal(t, string(expected), got)
 	})
 }
 
-func TestPrintEvaluationSummary(t *testing.T) {
-	t.Run("Test PrintEvaluationSummary", func(t *testing.T) {
+func TestGetEvaluationSummaryText(t *testing.T) {
+	t.Run("Test GetEvaluationSummaryText", func(t *testing.T) {
 		out = new(bytes.Buffer)
 		printer := CreateNewPrinter()
 		summary := EvaluationSummary{
@@ -158,7 +165,7 @@ func TestPrintEvaluationSummary(t *testing.T) {
 		}
 		k8sVersion := "1.2.3"
 
-		printer.PrintEvaluationSummary(summary, k8sVersion)
+		got := printer.GetEvaluationSummaryText(summary, k8sVersion)
 		expected := []byte(`(Summary)
 
 - Passing YAML validation: 4/5
@@ -169,13 +176,11 @@ func TestPrintEvaluationSummary(t *testing.T) {
 
 `)
 
-		got := out.(*bytes.Buffer).Bytes()
-
-		assert.Equal(t, string(expected), string(got))
+		assert.Equal(t, string(expected), got)
 
 	})
 
-	t.Run("Test PrintEvaluationSummary with no connection warning", func(t *testing.T) {
+	t.Run("Test GetEvaluationSummaryText with no connection warning", func(t *testing.T) {
 		out = new(bytes.Buffer)
 		printer := CreateNewPrinter()
 		summary := EvaluationSummary{
@@ -188,7 +193,7 @@ func TestPrintEvaluationSummary(t *testing.T) {
 		}
 		k8sVersion := "1.2.3"
 
-		printer.PrintEvaluationSummary(summary, k8sVersion)
+		got := printer.GetEvaluationSummaryText(summary, k8sVersion)
 		expected := []byte(`(Summary)
 
 - Passing YAML validation: 4/5
@@ -199,9 +204,7 @@ func TestPrintEvaluationSummary(t *testing.T) {
 
 `)
 
-		got := out.(*bytes.Buffer).Bytes()
-
-		assert.Equal(t, string(expected), string(got))
+		assert.Equal(t, string(expected), got)
 
 	})
 }

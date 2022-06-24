@@ -1,7 +1,10 @@
 package cmd
 
 import (
-	"github.com/datreeio/datree/bl/evaluation"
+	"time"
+
+	"github.com/datreeio/datree/pkg/evaluation"
+
 	"github.com/datreeio/datree/bl/files"
 	"github.com/datreeio/datree/bl/messager"
 	"github.com/datreeio/datree/bl/validation"
@@ -9,9 +12,10 @@ import (
 	"github.com/datreeio/datree/cmd/config"
 	"github.com/datreeio/datree/cmd/kustomize"
 	"github.com/datreeio/datree/cmd/publish"
-	schema_validator "github.com/datreeio/datree/cmd/schema-validator"
+	schemaValidator "github.com/datreeio/datree/cmd/schema-validator"
 	"github.com/datreeio/datree/cmd/test"
 	"github.com/datreeio/datree/cmd/version"
+	"github.com/datreeio/datree/pkg/ciContext"
 	"github.com/datreeio/datree/pkg/cliClient"
 	"github.com/datreeio/datree/pkg/executor"
 	"github.com/datreeio/datree/pkg/fileReader"
@@ -30,6 +34,7 @@ var rootCmd = &cobra.Command{
 var CliVersion string
 
 func NewRootCommand(app *App) *cobra.Command {
+	startTime := time.Now()
 
 	rootCmd.AddCommand(test.New(&test.TestCommandContext{
 		CliVersion:     CliVersion,
@@ -41,6 +46,8 @@ func NewRootCommand(app *App) *cobra.Command {
 		K8sValidator:   app.Context.K8sValidator,
 		CliClient:      app.Context.CliClient,
 		FilesExtractor: app.Context.FilesExtractor,
+		CiContext:      app.Context.CiContext,
+		StartTime:      startTime,
 	}))
 
 	rootCmd.AddCommand(kustomize.New(&test.TestCommandContext{
@@ -53,6 +60,7 @@ func NewRootCommand(app *App) *cobra.Command {
 		K8sValidator:   app.Context.K8sValidator,
 		CliClient:      app.Context.CliClient,
 		FilesExtractor: app.Context.FilesExtractor,
+		StartTime:      startTime,
 	}, &kustomize.KustomizeContext{CommandRunner: app.Context.CommandRunner}))
 
 	rootCmd.AddCommand(version.New(&version.VersionCommandContext{
@@ -79,7 +87,7 @@ func NewRootCommand(app *App) *cobra.Command {
 
 	rootCmd.AddCommand(completion.New())
 
-	rootCmd.AddCommand(schema_validator.New(&schema_validator.JSONSchemaValidatorCommandContext{
+	rootCmd.AddCommand(schemaValidator.New(&schemaValidator.JSONSchemaValidatorCommandContext{
 		JSONSchemaValidator: app.Context.JSONSchemaValidator,
 		Printer:             app.Context.Printer,
 	}))
@@ -90,6 +98,7 @@ func NewRootCommand(app *App) *cobra.Command {
 type Context struct {
 	LocalConfig         *localConfig.LocalConfigClient
 	Evaluator           *evaluation.Evaluator
+	CiContext           *ciContext.CIContext
 	CliClient           *cliClient.CliClient
 	Messager            *messager.Messager
 	Printer             *printer.Printer
